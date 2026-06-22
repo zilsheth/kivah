@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+// ─── AUTH ───────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  hustles   Hustle[]
+  tasks     Task[]
+  incomes Income[]
+  recipes    Recipe[]
+  mealPlans  MealPlan[]
+  homeTasks  HomeTask[]
+  workWins        WorkWin[]
+  skills          Skill[]
+  jobApplications JobApplication[]
+  prepItems       PrepItem[]
+  familyMembers   FamilyMember[]
+  wellnessLogs    WellnessLog[]
+  familyFinances  FamilyFinance[]
+  familyPlans     FamilyPlan[]
+}
+
+// ─── HUSTLE HUB ─────────────────────────────────────────
+
+model Hustle {
+  id          String   @id @default(uuid())
+  title       String
+  type        String   // UGC, writing, tutoring, etc.
+  monthlyGoal Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+  trackerFields TrackerField[]
+trackerEntries TrackerEntry[]
+incomes       Income[]
+note          Note?
+}
+
+
+model TrackerField {
+  id        String   @id @default(uuid())
+  name      String
+  fieldType String   // text, number, status, date, url
+  order     Int      @default(0)
+  options   String?  // comma-separated options for status type
+  createdAt DateTime @default(now())
+
+  hustleId String
+  hustle   Hustle @relation(fields: [hustleId], references: [id], onDelete: Cascade)
+  entries  TrackerEntry[]
+}
+
+model TrackerEntry {
+  id        String   @id @default(uuid())
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hustleId       String
+  hustle         Hustle        @relation(fields: [hustleId], references: [id], onDelete: Cascade)
+  trackerFieldId String
+  trackerField   TrackerField  @relation(fields: [trackerFieldId], references: [id], onDelete: Cascade)
+}
+
+model Income {
+  id            String   @id @default(uuid())
+  amount        Float
+  source        String   // client name, brand, platform etc.
+  description   String?
+  paymentMethod String?  // bank, paypal, cash etc.
+  receivedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  hustleId String
+  hustle   Hustle @relation(fields: [hustleId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  content   String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  hustleId String  @unique
+  hustle   Hustle  @relation(fields: [hustleId], references: [id], onDelete: Cascade)
+}
+
+// ─── TAS/K ENGINE (shared across modules) ─────────────────
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  completed   Boolean   @default(false)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Owner
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Context — task belongs to one of these (optional)
+  hustleId String?
+  hustle   Hustle? @relation(fields: [hustleId], references: [id], onDelete: Cascade)
+  
+  
+}
+
+// ─── HOME BASE ───────────────────────────────────────────
+
+model Recipe {
+  id          String   @id @default(uuid())
+  name        String
+  cuisine     String?  // Gujarati, Punjabi, South Indian etc.
+  servings    Int      @default(2)
+  isFasting   Boolean  @default(false)
+  instructions String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+  meals       Meal[]
+}
+
+model RecipeIngredient {
+  id       String  @id @default(uuid())
+  name     String
+  quantity String? // free text — "2 cups", "1 tsp" etc.
+  category String? // produce, dal/grains, dairy, spices, other
+
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model MealPlan {
+  id        String   @id @default(uuid())
+  weekStart DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meals  Meal[]
+}
+
+model Meal {
+  id       String  @id @default(uuid())
+  day      String  // Monday, Tuesday etc.
+  mealType String  // breakfast, lunch, dinner, snack
+  servings Int     @default(2)
+
+  mealPlanId String
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipeId   String
+  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model HomeTask {
+  id        String    @id @default(uuid())
+  title     String
+  completed Boolean   @default(false)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── CAREER HUB ──────────────────────────────────────────
+
+model WorkWin {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  metric      String?  // "reduced load time by 40%" etc.
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Skill {
+  id        String   @id @default(uuid())
+  name      String
+  category  String?  // frontend, backend, devops, soft-skill etc.
+  status    String   @default("learning") // learning, practicing, confident
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model JobApplication {
+  id             String    @id @default(uuid())
+  company        String
+  role           String
+  status         String    @default("applied") // applied, screening, interview, offer, rejected, withdrawn
+  appliedDate    DateTime  @default(now())
+  followUpDate   DateTime?
+  resumeVersion  String?
+  notes          String?
+  jobUrl         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PrepItem {
+  id        String   @id @default(uuid())
+  type      String   // dsa, system-design, behavioral
+  title     String
+  status    String   @default("struggling") // struggling, solved, mastered
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── FAMILYSPACE ─────────────────────────────────────────
+
+model FamilyMember {
+  id           String    @id @default(uuid())
+  name         String
+  relationship String    // spouse, child, parent, in-law, self etc.
+  dateOfBirth  DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  wellnessLogs WellnessLog[]
+  finances     FamilyFinance[]
+}
+
+model WellnessLog {
+  id        String   @id @default(uuid())
+  mood      String?  // great, good, okay, low, struggling
+  note      String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  familyMemberId String
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FamilyFinance {
+  id          String   @id @default(uuid())
+  type        String   // income, expense
+  amount      Float
+  category    String?  // groceries, rent, salary, utilities etc.
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  familyMemberId String?
+  familyMember   FamilyMember? @relation(fields: [familyMemberId], references: [id], onDelete: SetNull)
+  userId         String
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FamilyPlan {
+  id        String    @id @default(uuid())
+  title     String
+  completed Boolean   @default(false)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
